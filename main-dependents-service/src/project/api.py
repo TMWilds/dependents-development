@@ -6,6 +6,7 @@ import requests
 import neo4j_queries
 import utils
 import json
+from flask_cors import cross_origin
 
 project_blueprint = Blueprint('project_blueprint', __name__)
 pom_search_service = utils.get_depends_service()
@@ -60,6 +61,31 @@ def retrieve_children_of_node(group, project):
         return jsonify({'status': 'SERVER_ERROR'}), 500
 
     return jsonify({'status': 'SERVER_ERROR'}), 500
+
+@project_blueprint.route("/<group>/<project>/retrieve/hierarchy", methods=['Get'])
+@cross_origin()
+def retrieve_hierarchy(group, project):
+    """
+    This endpoint retrieves all children of the project that at least one
+    dependent project.
+    """
+    try:
+        driver = utils.get_neo4j()
+        try:
+            with driver.session() as session:
+                if session.read_transaction(neo4j_queries.project_exists, group, project):
+                    result = session.read_transaction(neo4j_queries.contains_from_node_new, group, project)
+                    return jsonify({'status': 'ok', 'data': result}), 200
+                else:
+                    return jsonify({'status': 'ERROR', 'reason': 'Project does not exist in Neo4j. Have you submitted a parse job to /init/dependents-search/pom yet?'}), 400
+        except:
+            traceback.print_exc()
+            return jsonify({'status': 'SERVER_ERROR'}), 500
+        finally:
+            driver.session().close()
+    except:
+        traceback.print_exc()
+        return jsonify({'status': 'SERVER_ERROR'}), 500
 
 # retrieve the dependents of an AST node of the project based on method calls
 @project_blueprint.route("/<group>/<project>/retrieve/dependents", methods=['Get'])
