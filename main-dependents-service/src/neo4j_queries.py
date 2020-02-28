@@ -1,3 +1,5 @@
+import json
+
 import utils
 
 """
@@ -110,7 +112,94 @@ def dependents_from_node(tx, group, project, node_label, node_id):
 
     return to_return
 
-def contains_from_node(tx, group, project, node_label, node_id, dependent_project_group, dependent_project_repo): 
+# TODO: replace original contains_from_node with this, or re-organise as needed
+def contains_from_node_new(tx, group, project):
+    """Return """
+    dependent_project_string = ""
+    match = '''
+        MATCH (p:Project {{ id: '{}/{}' }})-[:Contains*]->(c)-[:Contains*]->(:Method)<-[:Calls]-(:Method)<-[:Contains*]-(d:Project {})
+        RETURN c, COUNT(DISTINCT d) as v
+        UNION
+        MATCH (p:Project {{ id: '{}/{}' }})-[:Contains*]->(c:Method)<-[:Calls]-(:Method)<-[:Contains*]-(d:Project {})
+        RETURN c, COUNT(DISTINCT d) as v
+        '''.format(group, project, dependent_project_string, group,
+                   project, dependent_project_string)
+    print(match)
+    result = tx.run(match)
+
+    tmp = []
+    for node in result.graph().nodes:
+        print(node)
+        print(node)
+
+    print(result.graph())
+    print(result.graph().nodes)
+    print(result.graph().relationships)
+    for record in result:
+        print(record)
+        node = record.get('c')
+
+        object_to_return = {}
+        object_to_return['label'] = list(getattr(node, '_labels'))[0]
+        object_to_return['id'] = getattr(node, '_properties').get('id')
+        object_to_return['value'] = record.get("v")
+        object_to_return['properties'] = getattr(node, '_properties')
+        object_to_return['name'] = "{}: {}".format(
+            object_to_return.get('label'), object_to_return.get('id'))
+        object_to_return['children'] = []
+        object_to_return[
+            'retrieve_children_url'] = "{}/project/{}/{}/retrieve/children?label={}&id={}".format(
+            utils.get_domain(), group, project, object_to_return.get('label'),
+            object_to_return.get('id'))
+
+        tmp.append(object_to_return)
+
+    payload = {}
+    current_layer = payload
+    print(json.dumps(tmp))
+    for obj in tmp:
+        found = False
+        while found:
+            if obj["id"].startswith(current_layer["name"]):
+                current_layer["children"].append({
+                    "id": obj["id"],
+                    "value": obj["value"],
+                    "children": []
+                })
+    to_return = tmp.copy()
+
+    # Query returns relevant artifacts in the project, but contains no inherent
+    # hierarchical data. Construct this hierarchical data structure from the
+    # artifact's name.
+
+    output = {}
+    for data in to_return:
+        if not output.get("name", None):
+            output = {
+                "name": data["id"],
+                "value": data["value"],
+                "children": []
+            }
+        else:
+            print("did we even get here")
+            not_placed = True
+            current_layer = output
+            while not_placed:
+                for child in current_layer["children"]:
+                    print(child)
+                    if data["id"].startswith(child["name"]):
+                        current_layer = child
+                        break
+                else:
+                    current_layer["children"].append({
+                        "name": data["id"],
+                        "value": data["value"],
+                        "children": []
+                    })
+                    not_placed = False
+    return output
+
+def contains_from_node(tx, group, project, node_label, node_id, dependent_project_group, dependent_project_repo):
     if (dependent_project_group != None and dependent_project_repo != None):
         dependent_project_string = "{{ id: '{}/{}' }}".format(dependent_project_group, dependent_project_repo)
     else:
@@ -124,7 +213,6 @@ def contains_from_node(tx, group, project, node_label, node_id, dependent_projec
             MATCH (p:Project {{ id: '{}/{}' }})-[:Contains*]->(:{} {{id: '{}'}})-[:Contains]->(c:Method)<-[:Calls]-(:Method)<-[:Contains*]-(d:Project {})
             RETURN c, COUNT(DISTINCT d) as v
             '''.format(group, project, node_label, node_id, dependent_project_string, group, project, node_label, node_id, dependent_project_string)
-
         print(match)
         result = tx.run(match)
     else:
@@ -135,7 +223,6 @@ def contains_from_node(tx, group, project, node_label, node_id, dependent_projec
             MATCH (p:Project {{ id: '{}/{}' }})-[:Contains]->(c:Method)<-[:Calls]-(:Method)<-[:Contains*]-(d:Project {})
             RETURN c, COUNT(DISTINCT d) as v
             '''.format(group, project, dependent_project_string, group, project, dependent_project_string)
-
         print(match)
         result = tx.run(match)
 

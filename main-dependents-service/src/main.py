@@ -2,6 +2,7 @@
 import utils
 import time
 from flask import Flask, jsonify, request
+from flask_cors import CORS, cross_origin
 import os
 import requests
 import neo4j_queries
@@ -16,6 +17,9 @@ ast_parsing_queue_manager = utils.get_ast_queue_manager()
 dependents_service = utils.get_depends_service()
 
 app = Flask(__name__)
+# TODO: Not secure, using for pre-prod testing. Remove this.
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 app.register_blueprint(project_blueprint, url_prefix='/project')
 app.register_blueprint(artifact_blueprint, url_prefix='/artifact')
