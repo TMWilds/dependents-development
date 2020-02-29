@@ -108,7 +108,7 @@
         </g>
       </g>
     </svg>
-  </div>
+    </div>
 </template>
 
 <script>
@@ -142,7 +142,8 @@ export default {
       width: 960,
       height: 530,
       selected: null,
-      color: {}
+      color: {},
+      viewport: null
     }
   },
   // You can do whatever when the selected node changes
@@ -153,6 +154,10 @@ export default {
   },
   // In the beginning...
     async mounted () {
+        const [viewport] = this.$el.getElementsByClassName("treemap");
+        this.viewport = viewport;
+        this.width = this.viewport.clientWidth;
+        this.height = this.viewport.clientHeight;
         var that = this
         // An array with colors (can probably be replaced by a vuejs method)
         that.color = d3.scaleOrdinal(d3.schemeCategory10)
@@ -700,6 +705,11 @@ rect.parent,
 }
 .list-enter, .list-leave-to /* .list-leave-active for <2.1.8 */ {
   opacity: 0;
+}
+
+.viewport {
+  width: 100%;
+  flex: 1 1 auto;
 }
 
 </style>
