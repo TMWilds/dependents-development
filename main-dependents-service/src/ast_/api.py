@@ -8,6 +8,44 @@ import utils
 
 ast_blueprint = Blueprint('ast_blueprint', __name__)
 
+
+@ast_blueprint.route("/<group>/<project>/dependent_asts", methods=['Get'])
+def fetch_dependent_asts(group, project):
+    print(group)
+    print(project)
+
+    sub_node_label = request.args.get('label')
+    sub_node_id = request.args.get('id')
+
+    try:
+        driver = utils.get_neo4j()
+        try:
+            with driver.session() as session:
+                if session.read_transaction(neo4j_queries.project_exists,
+                                            group,
+                                            project):
+                    ast_result = session.read_transaction(
+                        neo4j_queries.ast_tree_dependent_new, group, project,
+                        sub_node_label, sub_node_id)
+
+                    return jsonify({'status': 'ok',
+                                    'data': ast_result,
+                                    }), 200
+                else:
+                    return jsonify({'status': 'ERROR',
+                                    'reason': 'Artifact does not exist in Neo4j'}), 400
+        except:
+            traceback.print_exc()
+            return jsonify({'status': 'SERVER_ERROR'}), 500
+        finally:
+            driver.session().close()
+    except:
+        traceback.print_exc()
+        return jsonify({'status': 'SERVER_ERROR'}), 500
+
+    return jsonify({'status': 'SERVER_ERROR'}), 500
+
+
 @ast_blueprint.route("/<group>/<project>/dependent", methods=['Get'])
 def fetch_dependent_ast(group, project):
     print (group)  

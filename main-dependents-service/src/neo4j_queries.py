@@ -10,8 +10,34 @@ def createTreeFromEdges(edges, vertices):
     nodes = {}
     forest = []
 
+    driver = utils.get_neo4j()
+    with driver.session() as session:
+        result = session.read_transaction(dependent_method_usage,
+                                    "jhy",
+                                    "jsoup")
+
+        node_usages = {}
+        for record in result:
+            node = record.get('node')
+
+            object_to_return = {}
+            object_to_return['label'] = list(getattr(node, '_labels'))[0]
+            object_to_return['id'] = getattr(node, '_properties').get('id')
+            object_to_return['usage'] = record.get("usage")
+            object_to_return['distinct_usage'] = record.get("usage_dist")
+            object_to_return['properties'] = getattr(node, '_properties')
+            object_to_return['name'] = "{}: {}".format(
+                object_to_return.get('label'), object_to_return.get('id'))
+            node_usages[object_to_return['id']] = object_to_return
+
+    driver.session().close()
+
     for node_id in vertices.keys():
         nodes[node_id] = { 'id': node_id, "name": getattr(vertices[node_id], '_properties').get('id'), "properties": getattr(vertices[node_id], '_properties'), "label": list(getattr(vertices[node_id], '_labels'))[0], "size": 1,  "children": [] }
+        id = nodes[node_id]["properties"]["id"]
+        nodes[node_id]["size"] = node_usages[id]["distinct_usage"]
+        nodes[node_id]["value"] = node_usages[id]["distinct_usage"]
+        nodes[node_id]["usage"] = node_usages[id]["usage"]
         forest.append(nodes[node_id])
 
     for i in edges:
@@ -28,6 +54,64 @@ def createTreeFromEdges(edges, vertices):
     #forest is now a graph, with a single root vertex
     # TODO: Remove shortest paths
     return forest
+
+"""Returns the total and distinct usage of methods for all dependents for given group and project"""
+def dependent_method_usage(tx, group, project):
+    match = '''
+        MATCH p = (proj:Project)-[r:Contains*0..]->(x)-[l:Contains*0..]->(i:Method)-[:Calls]->(m:Method)<-[:Contains*0..]-(y:Package {{id: "org.jsoup"}})<-[:Contains*0..]-(:Project {{id: "{0}/{1}"}})
+        RETURN x as node, count(distinct m) as usage_dist, count(m) as usage
+        UNION
+        MATCH p = (proj:Project)-[r:Contains*0..]->(x)-[l:Contains*0..]->(i:Method)-[:Calls]->(m:Method)<-[:Contains*0..]-(y:Package {{id: "org.jsoup"}})<-[:Contains*0..]-(:Project {{id: "{0}/{1}"}})
+        RETURN i as node, count(distinct m) as usage_dist, count(m) as usage
+        '''.format(group, project)
+    print(match)
+    return tx.run(match)
+
+
+"""
+ast_tree_dependent retrieves the complete AST tree of a specified dependent project, which is dependent on a specified node of a project under analysis
+"""
+def ast_tree_dependent_new(tx, group, project, sub_node_label, sub_node_id):
+
+    if (sub_node_label != None and sub_node_id != None):
+        match = '''
+            MATCH p = (proj:Project)-[r:Contains*0..]->(x)-[l:Contains*0..]->(i:Method)-[:Calls]->(:Method)<-[:Contains*0..]-(y:{} {{id: "{}"}})<-[:Contains*0..]-(:Project {{id: "{}/{}"}})
+            WITH proj as proj, collect(DISTINCT x) as nodes, collect(DISTINCT i) as other_nodes, [r in collect(distinct last(r)) | [id(startNode(r)),id(endNode(r))]] as rels, [l in collect(distinct last(l)) | [id(startNode(l)),id(endNode(l))]] as other_rels
+            RETURN proj, size(nodes), size(rels), size(other_nodes), size(other_rels), nodes, rels, other_nodes, other_rels
+            UNION
+            MATCH p = (proj:Project)-[r:Contains*0..]->(x)-[l:Contains*0..]->(i:Method)-[:Calls]->(y:{} {{id: "{}"}})<-[:Contains*0..]-(:Project {{id: "{}/{}"}})
+            WITH proj as proj, collect(DISTINCT x) as nodes, collect(DISTINCT i) as other_nodes, [r in collect(distinct last(r)) | [id(startNode(r)),id(endNode(r))]] as rels, [l in collect(distinct last(l)) | [id(startNode(l)),id(endNode(l))]] as other_rels
+            RETURN proj, size(nodes), size(rels), size(other_nodes), size(other_rels), nodes, rels, other_nodes, other_rels
+            '''.format(sub_node_label, sub_node_id, group, project, sub_node_label, sub_node_id, group, project)
+
+        print(match)
+        result = tx.run(match)
+    else:
+        match = '''
+            MATCH p = (proj:Project)-[r:Contains*0..]->(x)-[l:Contains*0..]->(i:Method)-[:Calls]->(:Method)<-[:Contains*0..]-(:Project {{id: "{}/{}"}})
+            WITH proj as proj, collect(DISTINCT x) as nodes, collect(DISTINCT i) as other_nodes, [r in collect(distinct last(r)) | [id(startNode(r)),id(endNode(r))]] as rels, [l in collect(distinct last(l)) | [id(startNode(l)),id(endNode(l))]] as other_rels
+            RETURN proj, size(nodes),size(rels), size(other_nodes), size(other_rels), nodes, rels, other_nodes, other_rels
+            '''.format(group, project)
+
+    print(match)
+    result = tx.run(match)
+
+    dependents = []
+    for record in result:
+        rels = []
+        nodes = {}
+        rels = rels + [x for x in record.get("rels") if x not in rels]
+        rels = rels + [x for x in record.get("other_rels") if x not in rels]
+
+        for node in record.get("nodes"):
+            nodes[node.id] = node
+
+        for node in record.get("other_nodes"):
+            nodes[node.id] = node
+
+        dependents.append(createTreeFromEdges(rels, nodes)[0])
+
+    return {"name": project, "children": dependents}
 
 """
 ast_tree_dependent retrieves the complete AST tree of a specified dependent project, which is dependent on a specified node of a project under analysis
@@ -143,6 +227,7 @@ def contains_from_node_new(tx, group, project):
         object_to_return['label'] = list(getattr(node, '_labels'))[0]
         object_to_return['id'] = getattr(node, '_properties').get('id')
         object_to_return['value'] = record.get("v")
+        object_to_return['size'] = record.get("v")
         object_to_return['properties'] = getattr(node, '_properties')
         object_to_return['name'] = "{}: {}".format(
             object_to_return.get('label'), object_to_return.get('id'))
@@ -164,6 +249,7 @@ def contains_from_node_new(tx, group, project):
                 current_layer["children"].append({
                     "id": obj["id"],
                     "value": obj["value"],
+                    "size": obj["size"],
                     "children": []
                 })
     to_return = tmp.copy()
@@ -178,6 +264,7 @@ def contains_from_node_new(tx, group, project):
             output = {
                 "name": data["id"],
                 "value": data["value"],
+                "size": data["size"],
                 "children": []
             }
         else:
@@ -194,6 +281,7 @@ def contains_from_node_new(tx, group, project):
                     current_layer["children"].append({
                         "name": data["id"],
                         "value": data["value"],
+                        "size": data["size"],
                         "children": []
                     })
                     not_placed = False
