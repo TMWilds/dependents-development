@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 
 import utils
 
@@ -286,6 +287,51 @@ def contains_from_node_new(tx, group, project):
                     })
                     not_placed = False
     return output
+
+def all_project_dependencies(tx, group, project):
+    """Return """
+    match = '''
+        MATCH (proj:Project)-[:Contains*]->(i:Method)-[:Calls*0..]->(m:Method)<-[:Contains*]-(:Project {{id: "{}/{}"}})
+        RETURN m, i, proj
+        '''.format(group, project)
+    print(match)
+    result = tx.run(match)
+    results_list = []
+    for record in result:
+        callee = record.get('m')
+        caller = record.get('i')
+        caller_project = record.get('proj'),
+
+        results_list.append([{
+            "id": getattr(callee, '_properties').get('id'),
+            "name": getattr(callee, '_properties').get('name'),
+            "project": "{}/{}".format(group, project),
+        }, {
+            "id": getattr(caller, '_properties').get('id'),
+            "name": getattr(caller, '_properties').get('name'),
+            "project": getattr(caller_project[0], '_properties').get('id'),
+        }])
+
+    output = defaultdict(lambda: defaultdict())
+    for pair in results_list:
+        output[pair[0]['id']]['name'] = 'root.' + pair[0]['id']
+        output[pair[0]['id']]['project'] = pair[0]['project']
+        output[pair[0]['id']]['size'] = 1
+        output[pair[0]['id']]['imports'] = []
+
+        output[pair[1]['id']]['name'] = 'root.' + pair[1]['id']
+        output[pair[1]['id']]['project'] = pair[1]['project']
+        output[pair[1]['id']]['size'] = 1
+
+        if 'root.' + pair[0]['id'] not in output[pair[1]['id']].get(
+                'imports', []):
+            if not output[pair[1]['id']].get('imports', None):
+                output[pair[1]['id']]['imports'] = []
+            output[pair[1]['id']]['imports'].append(
+                'root.' + pair[0]['id']),
+
+    return list(output.values())
+
 
 def contains_from_node(tx, group, project, node_label, node_id, dependent_project_group, dependent_project_repo):
     if (dependent_project_group != None and dependent_project_repo != None):

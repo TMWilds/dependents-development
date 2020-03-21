@@ -62,6 +62,27 @@ def retrieve_children_of_node(group, project):
 
     return jsonify({'status': 'SERVER_ERROR'}), 500
 
+@project_blueprint.route("/<group>/<project>/retrieve/project_calls", methods=['Get'])
+@cross_origin()
+def retrieve_project_calls(group, project):
+    try:
+        driver = utils.get_neo4j()
+        try:
+            with driver.session() as session:
+                if session.read_transaction(neo4j_queries.project_exists, group, project):
+                    result = session.read_transaction(neo4j_queries.all_project_dependencies, group, project)
+                    return jsonify({'status': 'ok', 'data': result}), 200
+                else:
+                    return jsonify({'status': 'ERROR', 'reason': 'Project does not exist in Neo4j. Have you submitted a parse job to /init/dependents-search/pom yet?'}), 400
+        except:
+            traceback.print_exc()
+            return jsonify({'status': 'SERVER_ERROR'}), 500
+        finally:
+            driver.session().close()
+    except:
+        traceback.print_exc()
+        return jsonify({'status': 'SERVER_ERROR'}), 500
+
 @project_blueprint.route("/<group>/<project>/retrieve/hierarchy", methods=['Get'])
 @cross_origin()
 def retrieve_hierarchy(group, project):
