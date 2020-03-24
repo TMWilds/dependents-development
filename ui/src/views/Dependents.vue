@@ -53,7 +53,7 @@
                             </v-tab-item>
                             <v-tab-item key="sunburst">
                                 <sunburst v-on:clickNode="onHierarchyNodeSelect" v-show="checked"
-                                          :data="hiearchyData">
+                                          :data="hiearchyData" style="height: 30rem; margin-top: 3rem">
                                     <!-- Add behaviors -->
                                     <template slot-scope="{ on, actions }">
                                         <highlightOnHover v-bind="{ on, actions }"/>
@@ -61,9 +61,14 @@
                                     </template>
 
                                     <!-- Add information to be displayed on top the graph -->
-                                    <nodeInfoDisplayer slot="top" slot-scope="{ nodes }" :current="nodes.mouseOver"
-                                                       :root="nodes.root"
-                                                       description="of visits begin with this sequence of pages"/>
+                                    <SunburstNodeInfo slot="top" slot-scope="{ nodes }" :current="nodes.mouseOver"
+                                                       :root="nodes.root" :show-all-number="true"
+                                                       description="of visits begin with this sequence of pages">
+                                        <template slot="display" slot-scope="{current}">
+                                            <span> {{current.value}} usages </span> <br />
+                                            <span> {{current.data.dependent_projects}} dependent projects </span>
+                                        </template>
+                                    </SunburstNodeInfo>
 
                                     <!-- Add bottom legend -->
                                     <breadcrumbTrail slot="legend" slot-scope="{ nodes, colorGetter, width }"
@@ -124,10 +129,10 @@
     import {
         breadcrumbTrail,
         highlightOnHover,
-        nodeInfoDisplayer,
         sunburst,
         zoomOnClick
     } from 'vue-d3-sunburst';
+    import SunburstNodeInfo from "../components/SunburstNodeInfo";
     import "vue-d3-sunburst/dist/vue-d3-sunburst.css";
     import ForceGraph from "../components/ForceGraph";
     import EdgeBundle from "../components/EdgeBundle"
@@ -139,9 +144,9 @@
             Treemap,
             breadcrumbTrail,
             highlightOnHover,
-            nodeInfoDisplayer,
             sunburst,
-            zoomOnClick
+            zoomOnClick,
+            SunburstNodeInfo
         },
         mounted: async function () {
             const response = await fetch(
