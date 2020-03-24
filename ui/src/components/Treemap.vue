@@ -10,9 +10,9 @@
           <!-- Generate each of the visible squares at a given zoom level (the current selected node) -->
           <g
             class="children"
-            v-for="(child, index) in selectedNode._children"
+            v-for="(child, index) in displayedNode._children"
             :key="'c_' + child.id"
-            v-if="selectedNode"
+            v-if="displayedNode"
             >
 
             <!-- Generate the children squares (only visible on hover of a square) -->
@@ -42,7 +42,7 @@
               :y="y(child.y0)"
               :width="x(child.x1 - child.x0 + child.parent.x0)"
               :height="y(child.y1 - child.y0 + child.parent.y0)"
-              :style="{ fill: color(index) }"
+              :style="{ fill: color(index),  'fill-opacity': selectedIsLeaf && selected !== child.id ? 0.2 : 0.5}"
               >
 
               <!-- The title attribute -->
@@ -50,38 +50,17 @@
             </rect>
 
             <!-- The visible square text element with the title and value of the child node -->
-            <text
-              dy="1em"
-              :key="'t_' + child.id"
-              :x="x(child.x0) + 6"
-              :y="y(child.y0) + 6"
-              style="fill-opacity: 1;"
-              >
-              {{ child.data.name }}
-            </text>
-
-
-            <text
-              dy="2.25em"
-              :key="'t_' + child.id"
-              :x="x(child.x0) + 6"
-              :y="y(child.y0) + 6"
-              style="fill-opacity: 1;"
-              >
-
-              <template v-if="child.children" >{{ child.children.length }} children </template>
-            </text>
-
-            <text
-              dy="3.25em"
-              :key="'t_' + child.id"
-              :x="x(child.x0) + 6"
-              :y="y(child.y0) + 6"
-              style="fill-opacity: 1;"
-              >
-
-              {{ child.data.value }} unique dependents
-            </text>
+                <text
+                dy="1em"
+                :key="'t_' + child.id + '_name'"
+                :x="x(child.x0) + 6"
+                :y="y(child.y0) + 6"
+                style="fill-opacity: 1;"
+                >
+                      <slot name="tile-text" :tile="child" :x="x(child.x0) + 6" :y="y(child.y0) + 6">
+                        {{ child.data.name }}
+                      </slot>
+              </text>
 
 
           </g>
@@ -104,7 +83,7 @@
             x="6"
             y="-14">
 
-            {{ selectedNode.id }}
+            {{ displayedNode.id }}
           </text>
         </g>
       </g>
@@ -161,6 +140,9 @@ export default {
       console.log('The selected node changed...')
       console.log(newData)
       console.log(oldData)
+    },
+    data (newData, oldData) {
+      this.initialize()
     }
   },
   // In the beginning...
@@ -173,10 +155,7 @@ export default {
         var that = this
         // An array with colors (can probably be replaced by a vuejs method)
         that.color = d3.scaleOrdinal(d3.schemeCategory10)
-        that.jsonData = this.data
-        that.initialize()
-        that.accumulate(that.rootNode, that)
-        that.treemap(that.rootNode)
+    that.initialize()
         //   }
         // )
     },
@@ -184,10 +163,10 @@ export default {
   computed: {
     // The grandparent id
     parentId () {
-      if (this.selectedNode.parent === undefined || this.selectedNode.parent === null) {
-        return this.selectedNode.id
+      if (this.displayedNode.parent === undefined || this.displayedNode.parent === null) {
+        return this.displayedNode.id
       } else {
-        return this.selectedNode.parent.id
+        return this.displayedNode.parent.id
       }
     },
     // Returns the x position within the current domain
@@ -211,8 +190,8 @@ export default {
       .round(false)
       .paddingInner(0)
     },
-    // The current selected node
-    selectedNode () {
+    // The current displayed node
+    displayedNode () {
       let node = null
       if (this.selected) {
         let nd = this.getNodeById(this.rootNode, this.selected, this)
@@ -228,12 +207,33 @@ export default {
       this.x.domain([node.x0, node.x0 + (node.x1 - node.x0)])
       this.y.domain([node.y0, node.y0 + (node.y1 - node.y0)])
       return node
+    },
+    selectedNode () {
+      let node = null
+      if (this.selected) {
+        let nd = this.getNodeById(this.rootNode, this.selected, this)
+          node = nd
+      } else {
+        node = this.rootNode
+      }
+      return node
+    },
+    selectedIsLeaf () {
+      if (this.selected) {
+        let nd = this.getNodeById(this.rootNode, this.selected, this)
+        if (!nd._children) {
+          return true
+        }
+      }
+      return false
     }
   },
   methods: {
     // Called once, to create the hierarchical data representation
     initialize () {
       let that = this
+      that.selected = null
+      that.jsonData = this.data
       if (that.jsonData) {
         that.rootNode = d3.hierarchy(that.jsonData)
         .eachBefore(function (d) { d.id = (d.parent ? d.parent.id + '.' : '') + d.data.name })
@@ -246,6 +246,8 @@ export default {
         that.rootNode.y1 = that.height
         that.rootNode.depth = 0
       }
+      that.accumulate(that.rootNode, that)
+      that.treemap(that.rootNode)
     },
     // Calculates the accumulated value (sum of children values) of a node - its weight,
     // represented afterwards in the area of its square
@@ -272,10 +274,14 @@ export default {
       }
     },
     // When a user clicks a square, changes the selected data attribute
-    // which fires the computed selectedNode, which in turn finds the Node by the id of the square clicked
+    // which fires the computed displayedNode, which in turn finds the Node by the id of the square clicked
     // and the template reflects the changes
     selectNode (event) {
-      this.selected = event.target.id
+      if (this.selectedIsLeaf && this.selected === event.target.id) {
+        this.selected = this.displayedNode.id
+      } else {
+        this.selected = event.target.id
+      }
     }
   }
 }
