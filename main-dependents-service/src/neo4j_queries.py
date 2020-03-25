@@ -23,6 +23,7 @@ def createTreeFromEdges(edges, vertices, group, project, sub_node_label, sub_nod
             object_to_return['label'] = list(getattr(node, '_labels'))[0]
             object_to_return['id'] = getattr(node, '_properties').get('id')
             object_to_return['usage'] = record.get("usage")
+            object_to_return['project'] = getattr(record.get("proj"), '_properties').get('id')
             object_to_return['distinct_usage'] = record.get("usage_dist")
             object_to_return['properties'] = getattr(node, '_properties')
             object_to_return['name'] = "{}: {}".format(
@@ -41,6 +42,7 @@ def createTreeFromEdges(edges, vertices, group, project, sub_node_label, sub_nod
         nodes[node_id]["usage"] = node_usages[id]["usage"]
         nodes[node_id]["distinct_usage"] = node_usages[id]["distinct_usage"]
         nodes[node_id]["label"] = node_usages[id]["label"]
+        nodes[node_id]["project"] = node_usages[id]["project"]
         forest.append(nodes[node_id])
 
     for i in edges:
@@ -62,10 +64,10 @@ def createTreeFromEdges(edges, vertices, group, project, sub_node_label, sub_nod
 def dependent_method_usage(tx, group, project, sub_node_label, sub_node_id):
     match = '''
         MATCH p = (proj:Project)-[r:Contains*0..]->(x)-[l:Contains*0..]->(i:Method)-[:Calls]->(m:Method)<-[:Contains*0..]-(y:{2} {{id: "{3}"}})<-[:Contains*0..]-(:Project {{id: "{0}/{1}"}})
-        RETURN x as node, count(distinct m) as usage_dist, count(m) as usage
+        RETURN proj as proj, x as node, count(distinct m) as usage_dist, count(m) as usage
         UNION
-        MATCH p = (proj:Project)-[r:Contains*0..]->(x)-[l:Contains*0..]->(i:Method)-[:Calls]->(m:Method)<-[:Contains*0..]-(y:{2} {{id: "{3}"}})<-[:Contains*0..]-(:Project {{id: "{0}/{1}"}})
-        RETURN i as node, count(distinct m) as usage_dist, count(m) as usage
+        MATCH p = (proj:Project)-[r:Contains*0..]->(i:Method)-[:Calls]->(m:Method)<-[:Contains*0..]-(y:{2} {{id: "{3}"}})<-[:Contains*0..]-(:Project {{id: "{0}/{1}"}})
+        RETURN proj as proj, i as node, count(distinct m) as usage_dist, count(m) as usage
         '''.format(group, project, sub_node_label, sub_node_id)
     print(match)
     return tx.run(match)
