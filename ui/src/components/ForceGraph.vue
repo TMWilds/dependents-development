@@ -1,18 +1,8 @@
 <template>
-    <div v-if="show" id="app">
-        <svg id="graph"></svg>
-        <!--        <div class="controls">-->
-        <!--            <div>-->
-        <!--                <label>Adjust width</label>-->
-        <!--                <input type="range" v-model="settings.width" min="0" max="100" />-->
-        <!--            </div>-->
-        <!--        </div>-->
-        <!--        <div class="svg-container" :style="{width: settings.width + '%'}">-->
-        <!--            <svg id="svg" pointer-events="all" viewBox="0 0 960 600" preserveAspectRatio="xMinYMin meet">-->
-        <!--                <g :id="links"></g>-->
-        <!--                <g :id="nodes"></g>-->
-        <!--            </svg>-->
-        <!--        </div>-->
+    <div style="overflow-x: scroll; overflow-y: scroll" >
+    <div :class="'app'+this._uid" style="height: inherit;">
+        <svg :id="'graph'+this._uid"></svg>
+    </div>
     </div>
 </template>
 
@@ -23,7 +13,9 @@
     import {scaleLinear, scaleOrdinal} from 'd3-scale'
     import {forceSimulation, forceLink, forceManyBody, forceCenter, forceX, forceY} from 'd3-force'
     import {schemeCategory10} from 'd3-scale-chromatic'
-    import {hierarchy} from 'd3-hierarchy'
+    import {hierarchy, tree} from 'd3-hierarchy'
+    import {linkHorizontal, linkVertical} from 'd3-shape'
+    import {interpolateViridis} from 'd3-scale-chromatic'
 
     const getEvent = () => event;
 
@@ -41,7 +33,11 @@
         hierarchy: hierarchy,
         create: create,
         forceX: forceX,
-        forceY: forceY
+        forceY: forceY,
+        tree: tree,
+        linkHorizontal: linkHorizontal,
+        linkVertical: linkVertical,
+        interpolateViridis: interpolateViridis
     }
     export default {
         name: "ForceGraph",
@@ -56,26 +52,48 @@
         data: function() {
             return {
                 simulation: null,
-                show: true
+                width: null,
+                height: null
             }
         },
         mounted: function () {
+            const [viewport] = this.$el.getElementsByClassName("app"+this._uid);
+            this.width = viewport.clientWidth;
+            this.height = viewport.clientHeight;
             this.render()
         },
         watch: {
           data (newData, oldData) {
               console.log("data changed");
-              this.simulation.stop();
-              d3.select("#graph").selectAll("*").remove();
+              // this.simulation.stop();
+              d3.select("#graph" + this._uid).selectAll("*").remove();
               this.$nextTick(() => {
                   this.render()
               });
           }
         },
+        computed: {
+            projectList: function () {
+                let projectSet = new Set();
+                for (const datum of this.data.children) {
+                        projectSet.add(datum.project)
+                }
+                return Array.from(projectSet)
+            },
+            projectColours: function () {
+                const output = {}
+                const colourSelectInterval = 1 / this.projectList.length
+                const projects = this.projectList
+                for (const [index, project] of projects.entries()) {
+                    output[project] = d3.interpolateViridis(index * colourSelectInterval)
+                }
+                return output
+            },
+        },
         methods: {
             render: function () {
-                const height = 600
-                const width = 600
+                // const height = 600
+                // const width = 600
 
                 const drag = simulation => {
 
@@ -107,38 +125,56 @@
                 const nodes = root.descendants();
 
                 const simulation = d3.forceSimulation(nodes)
-                    .force("link", d3.forceLink(links).id(d => d.id).distance(0).strength(1))
-                    .force("charge", d3.forceManyBody().strength(-50))
+                    .force("link", d3.forceLink(links).id(d => d.id).distance(1).strength(1))
+                    .force("charge", d3.forceManyBody().strength(-150))
                     .force("x", d3.forceX())
                     .force("y", d3.forceY());
 
                 this.simulation = simulation;
 
-                const svg = d3.select("#graph")
-                    .attr("viewBox", [-width / 2, -height / 2, width, height]);
+                const svg = d3.select("#graph" + this._uid)
+                    .attr("viewBox", [-this.width / 2, -this.height / 2, this.width, this.height]);
                 console.log(svg)
 
                 const link = svg.append("g")
-                    .attr("stroke", "#999")
+                    .attr("stroke", "#000000")
                     .attr("stroke-opacity", 0.6)
                     .selectAll("line")
                     .data(links)
-                    .join("line");
+                    .join("line")
+                    .attr("stroke-width", d => Math.log10(d.target.value) * 2);
+
+
+                link.append("title")
+                    .text(d => 'Dependent calls ' +  d.target.value);
+
+                console.log(links)
+
+                const colors = this.projectColours
 
                 const node = svg.append("g")
-                    .attr("fill", "#fff")
-                    .attr("stroke", "#000")
                     .attr("stroke-width", 1.5)
                     .selectAll("circle")
                     .data(nodes)
                     .join("circle")
-                    .attr("fill", d => d.children ? null : "#000")
-                    .attr("stroke", d => d.children ? null : "#fff")
-                    .attr("r", 3.5)
+                    .attr("fill", d => colors[d.data.project])
+                    .attr("stroke", d => d.children ? "#000" : "#fff")
+                    .attr("r", 6.5)
                     .call(drag(simulation));
 
                 node.append("title")
                     .text(d => d.data.name);
+
+                const text = svg.append("g")
+                    .attr("stroke", "#999")
+                    .attr("stroke-opacity", 0.6)
+                    .selectAll("text")
+                    .data(nodes)
+                    .join("text")
+                    .attr("fill", "black")
+                    .style("font-size", "12")// <=== Set the fill
+                    .text(d => !d.children ? d.data.name : '')
+                    .call(drag(simulation));
 
                 simulation.on("tick", () => {
                     link
@@ -150,12 +186,16 @@
                     node
                         .attr("cx", d => d.x)
                         .attr("cy", d => d.y);
+
+                    text
+                        .attr("x", d => d.x - 10)
+                        .attr("y", d => d.y - 10);
                 });
 
                 // invalidation.then(() => simulation.stop());
 
                 return svg.node();
-            }
+            },
         }
     }
 </script>

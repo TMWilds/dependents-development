@@ -96,6 +96,9 @@
                             >
                                 Force Directed Graph
                             </v-tab>
+                            <v-tab>
+                                Tree
+                            </v-tab>
                         </v-tabs>
                         <v-tabs-items v-model="checkedRel">
                             <v-tab-item key="treemap-sub">
@@ -108,7 +111,10 @@
                                 </treemap>
                             </v-tab-item>
                             <v-tab-item key="graph">
-                                <force-graph v-show="checkedRel" :data="forceTestData"/>
+                                <force-graph v-show="checkedRel" :data="forceTestData" style="height: 30rem"/>
+                            </v-tab-item>
+                            <v-tab-item key="tree">
+                                <tidy-tree :data="forceTestData"/>
                             </v-tab-item>
                         </v-tabs-items>
                     </v-col>
@@ -135,7 +141,8 @@
     import SunburstNodeInfo from "../components/SunburstNodeInfo";
     import "vue-d3-sunburst/dist/vue-d3-sunburst.css";
     import ForceGraph from "../components/ForceGraph";
-    import EdgeBundle from "../components/EdgeBundle"
+    import EdgeBundle from "../components/EdgeBundle";
+    import TidyTree from "../components/TidyTree";
 
     export default {
         components: {
@@ -146,7 +153,8 @@
             highlightOnHover,
             sunburst,
             zoomOnClick,
-            SunburstNodeInfo
+            SunburstNodeInfo,
+            TidyTree
         },
         mounted: async function () {
             const response = await fetch(
