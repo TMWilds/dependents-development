@@ -1,15 +1,15 @@
 <template>
-    <div>
-        <div style="float: left">
-            <p> Analysed Project </p>
+    <div class="outer">
+        <div class="inner-left" style="margin-top: 2rem">
+            <h4> Analysed Project </h4>
             <p><span style="color: #ff5c45"> ⬤ </span> <span> {{analysedProject}} </span></p>
-            <p> Dependent Projects </p>
+            <h4> Dependent Projects </h4>
             <div v-for="project in projectList">
                 <input type="checkbox" :id="project" :value="project" v-model="filteredProjects">
                 <label :for="project"><span :style="{color: projectColours[project]}"> ⬤ {{project}} </span></label>
             </div>
         </div>
-        <div id="bundle">
+        <div id="bundle" class="inner-right">
         </div>
     </div>
 </template>
@@ -234,6 +234,33 @@ ${d.incoming.length} incoming`))
     }
 </script>
 
-<style>
+<style scoped>
+ div.outer {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-wrap: wrap;
+    flex-wrap: wrap;
+    -webkit-box-flex: 1;
+    -ms-flex: 1 1 auto;
+    flex: 1 1 auto;
+    margin-right: -12px;
+    margin-left: -12px;
+ }
+
+    div.inner-left {
+    -webkit-box-flex: 0;
+    -ms-flex: 0 0 50%;
+    flex: 0 0 20%;
+    max-width: 20%;
+    }
+
+    div.inner-right {
+            -webkit-box-flex: 0;
+    -ms-flex: 0 0 50%;
+    flex: 0 0 80%;
+    max-width: 80%;
+    }
+
 
 </style>
