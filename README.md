@@ -19,7 +19,7 @@ The overall application logic distributed across the defined services can be vis
 ![System Logic](./figures/system-logic-2.jpg)
 
 The source code for each service can be found in the following subdirectories:
-* [Front End Analysis and Visualisation](./dependents-visualisation-ui/)
+* [Front End Analysis and Visualisation](dependents-visualisation-ui-legacy/)
 * [Retrieval of Data for Dependency Call Graph Visualisation and Management Service](./main-dependents-service/)
 * Package Retrieval And Search Service
     * [POM Parsing Queue Manager and Workers](./pom-parsing-queue/)

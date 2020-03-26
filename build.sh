@@ -20,7 +20,11 @@ pushd ./main-dependents-service
 ./build.sh
 popd
 
-pushd ./dependents-visualisation-ui
+pushd ./dependents-visualisation-ui-legacy
+./build.sh
+popd
+
+pushd ./dependents-ui-service
 ./build.sh
 popd
 

@@ -52,7 +52,7 @@
                                 </treemap>
                             </v-tab-item>
                             <v-tab-item key="sunburst">
-                                <sunburst v-on:clickNode="onHierarchyNodeSelect" v-show="checked"
+                                <sunburst ref="sunburst" v-on:clickNode="onHierarchyNodeSelect"
                                           :data="hiearchyData" style="height: 30rem; margin-top: 3rem">
                                     <!-- Add behaviors -->
                                     <template slot-scope="{ on, actions }">
