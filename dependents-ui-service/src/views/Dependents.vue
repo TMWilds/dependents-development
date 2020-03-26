@@ -153,7 +153,7 @@
         },
         mounted: async function () {
             const response = await fetch(
-                'http://localhost:8080/api/v1/project/'+this.analysedProject+'/retrieve/hierarchy',
+                this.url+'/api/v1/project/'+this.analysedProject+'/retrieve/hierarchy',
                 {
                     method: 'GET'
                 }
@@ -162,7 +162,7 @@
             this.hiearchyData = stats["data"]
 
             const responseCalls = await fetch(
-                'http://localhost:8080/api/v1/project/'+this.analysedProject+'/retrieve/project_calls',
+                this.url+'/api/v1/project/'+this.analysedProject+'/retrieve/project_calls',
                 {
                     method: 'GET'
                 }
@@ -698,12 +698,15 @@
         computed: {
             analysedProject: function () {
                 return this.$route.params.group + '/' + this.$route.params.project
+            },
+            url: function () {
+                return window.location.protocol + '//' + window.location.hostname + ':' +  window.location.port + '/'
             }
         },
         methods: {
             onHierarchyNodeSelect: async function (node) {
                 const response = await fetch(
-                    'http://localhost:8080/api/v1/ast/' + this.analysedProject + '/dependent_asts?label=' + node.node.data.label + '&id=' + node.node.data.id,
+                    this.url+'/api/v1/ast/' + this.analysedProject + '/dependent_asts?label=' + node.node.data.label + '&id=' + node.node.data.id,
                     {
                         method: 'GET'
                     }
