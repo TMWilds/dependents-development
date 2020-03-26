@@ -105,8 +105,8 @@
                                 <treemap v-show="!checkedRel" :data="dummy" style="margin-bottom: 10rem">
                                     <template slot="tile-text" slot-scope="{ tile, x, y }">
                                         <tspan style="font-weight: bold" dx="0em" dy="1em">{{ tile.data.name }}</tspan>
-                                        <tspan :x="x" dy="1em">{{ tile.data.value }} usage{{tile.data.value !== 1 ? 's':''}}</tspan>
-                                        <tspan :x="x" dy="1em">{{ tile.data.distinct_usage }} distinct usage{{tile.data.distinct_usage !== 1 ? 's':''}}</tspan>
+                                        <tspan :x="x" dy="1em">{{ tile.data.value }} call{{tile.data.value !== 1 ? 's':''}} to analysed entity</tspan>
+                                        <tspan :x="x" dy="1em">Calls {{ tile.data.distinct_usage }} distinct method{{tile.data.distinct_usage !== 1 ? 's':''}}</tspan>
                                     </template>
                                 </treemap>
                             </v-tab-item>
@@ -121,11 +121,6 @@
                 </v-row>
             </v-tab-item>
         </v-tabs-items>
-        <v-row>
-            <v-col md="12">
-                <!--                            <edge-bundle/>-->
-            </v-col>
-        </v-row>
 
     </v-container>
 </template>
@@ -158,7 +153,7 @@
         },
         mounted: async function () {
             const response = await fetch(
-                'http://localhost:8080/api/v1/project/jhy/jsoup/retrieve/hierarchy',
+                'http://localhost:8080/api/v1/project/'+this.analysedProject+'/retrieve/hierarchy',
                 {
                     method: 'GET'
                 }
@@ -167,7 +162,7 @@
             this.hiearchyData = stats["data"]
 
             const responseCalls = await fetch(
-                'http://localhost:8080/api/v1/project/jhy/jsoup/retrieve/project_calls',
+                'http://localhost:8080/api/v1/project/'+this.analysedProject+'/retrieve/project_calls',
                 {
                     method: 'GET'
                 }
@@ -702,13 +697,13 @@
         },
         computed: {
             analysedProject: function () {
-                return 'jhy/jsoup'
+                return this.$route.params.group + '/' + this.$route.params.project
             }
         },
         methods: {
             onHierarchyNodeSelect: async function (node) {
                 const response = await fetch(
-                    'http://localhost:8080/api/v1/ast/jhy/jsoup/dependent_asts?label=' + node.node.data.label + '&id=' + node.node.data.id,
+                    'http://localhost:8080/api/v1/ast/' + this.analysedProject + '/dependent_asts?label=' + node.node.data.label + '&id=' + node.node.data.id,
                     {
                         method: 'GET'
                     }

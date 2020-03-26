@@ -12,7 +12,7 @@ const routes = [
     component: Home
   },
   {
-    path: '/dependents/analysis',
+    path: '/dependents/analysis/:group/:project',
     name: 'Analysis',
     component: Dependents,
 
