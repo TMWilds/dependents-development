@@ -9,6 +9,14 @@ services:
       backend:
         aliases:
           - entrypoint-proxy-service
+  dependents-ui-service-legacy:
+    image: dependents-ui-legacy:latest
+    ports:
+        - 91:80
+    networks:
+      backend:
+        aliases:
+          - dependents-ui-legacy
   dependents-ui-service:
     image: dependents-ui:latest
     ports:
