@@ -4,7 +4,7 @@
 // var api_url = "http://localhost:8080/api/v1";
 // var site_url = "http://localhost:8080";
 
-var api_url = window.location.protocol + '//' + window.location.hostname + ':' +  window.location.port + '/legacy/api/v1';
+var api_url = window.location.protocol + '//' + window.location.hostname + ':' +  window.location.port + '/api/v1';
 var site_url = window.location.protocol + '//' + window.location.hostname + ':' +  window.location.port + '/legacy/';
 
 var project_page_url = `${site_url}/project-dependents-view.html`;

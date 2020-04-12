@@ -6,7 +6,7 @@
       dark
     >
 
-      <router-link to="/"><h1 style="color: white">dependents.dev</h1></router-link>
+      <router-link to="/"><h1 style="color: white">DependentsVis</h1></router-link>
       <h3 style="margin-left: 1rem"> Software Dependency Analysis</h3>
             <v-spacer></v-spacer>
 
@@ -24,14 +24,9 @@
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld';
 
 export default {
   name: 'App',
-
-  components: {
-    HelloWorld,
-  },
 
   data: () => ({
     //

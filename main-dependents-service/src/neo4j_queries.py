@@ -45,19 +45,33 @@ def createTreeFromEdges(edges, vertices, group, project, sub_node_label, sub_nod
         nodes[node_id]["project"] = node_usages[id]["project"]
         forest.append(nodes[node_id])
 
+    # Must remove shortest paths to ensure there is no duplication. Java hiearchy naming can be used to ensure only direct children are linked.
+    # The issue is that project names at the top level don't follow this pattern, so extra work must be done to identify which children are direct children of the
+    # project level.
+    roots = []
+    for i in edges:
+        parent_id, child_id = i
+        if nodes[parent_id]["project"] == nodes[parent_id]["id"]:
+            roots.append(nodes[child_id]["id"])
+
+    tmp = roots.copy()
+    for outer_root in tmp:
+        roots = [root for root in roots if not root.startswith(outer_root) or root == outer_root]
+
     for i in edges:
         parent_id, child_id = i
 
-        node = nodes[child_id]
-        parent = nodes[parent_id]
+        if nodes[parent_id]["project"] == nodes[parent_id]["id"] and nodes[child_id]["id"] in roots or nodes[parent_id]["id"] + '.' + nodes[child_id]["id"].split(".")[-1] == nodes[child_id]["id"]:
 
-        parent['children'].append(node)
+            node = nodes[child_id]
+            parent = nodes[parent_id]
 
-        if (node in forest):
-            forest.remove(node)
+            parent['children'].append(node)
+
+            if (node in forest):
+                forest.remove(node)
 
     #forest is now a graph, with a single root vertex
-    # TODO: Remove shortest paths
     return forest
 
 """Returns the total and distinct usage of methods for all dependents for given group and project"""
@@ -79,15 +93,25 @@ ast_tree_dependent retrieves the complete AST tree of a specified dependent proj
 def ast_tree_dependent_new(tx, group, project, sub_node_label, sub_node_id):
 
     if (sub_node_label != None and sub_node_id != None):
+        # match = '''
+        #     MATCH p = (proj:Project)-[r:Contains*0..]->(x)-[l:Contains*0..]->(i:Method)-[:Calls]->(:Method)<-[:Contains*0..]-(y:{} {{id: "{}"}})<-[:Contains*0..]-(:Project {{id: "{}/{}"}})
+        #     WITH proj as proj, collect(DISTINCT x) as nodes, collect(DISTINCT i) as other_nodes, [r in collect(distinct last(r)) | [id(startNode(r)),id(endNode(r))]] as rels, [l in collect(distinct last(l)) | [id(startNode(l)),id(endNode(l))]] as other_rels
+        #     RETURN proj, size(nodes), size(rels), size(other_nodes), size(other_rels), nodes, rels, other_nodes, other_rels
+        #     UNION
+        #     MATCH p = (proj:Project)-[r:Contains*0..]->(x)-[l:Contains*0..]->(i:Method)-[:Calls]->(y:{} {{id: "{}"}})<-[:Contains*0..]-(:Project {{id: "{}/{}"}})
+        #     WITH proj as proj, collect(DISTINCT x) as nodes, collect(DISTINCT i) as other_nodes, [r in collect(distinct last(r)) | [id(startNode(r)),id(endNode(r))]] as rels, [l in collect(distinct last(l)) | [id(startNode(l)),id(endNode(l))]] as other_rels
+        #     RETURN proj, size(nodes), size(rels), size(other_nodes), size(other_rels), nodes, rels, other_nodes, other_rels
+        #     '''.format(sub_node_label, sub_node_id, group, project, sub_node_label, sub_node_id, group, project)
         match = '''
-            MATCH p = (proj:Project)-[r:Contains*0..]->(x)-[l:Contains*0..]->(i:Method)-[:Calls]->(:Method)<-[:Contains*0..]-(y:{} {{id: "{}"}})<-[:Contains*0..]-(:Project {{id: "{}/{}"}})
-            WITH proj as proj, collect(DISTINCT x) as nodes, collect(DISTINCT i) as other_nodes, [r in collect(distinct last(r)) | [id(startNode(r)),id(endNode(r))]] as rels, [l in collect(distinct last(l)) | [id(startNode(l)),id(endNode(l))]] as other_rels
-            RETURN proj, size(nodes), size(rels), size(other_nodes), size(other_rels), nodes, rels, other_nodes, other_rels
-            UNION
-            MATCH p = (proj:Project)-[r:Contains*0..]->(x)-[l:Contains*0..]->(i:Method)-[:Calls]->(y:{} {{id: "{}"}})<-[:Contains*0..]-(:Project {{id: "{}/{}"}})
-            WITH proj as proj, collect(DISTINCT x) as nodes, collect(DISTINCT i) as other_nodes, [r in collect(distinct last(r)) | [id(startNode(r)),id(endNode(r))]] as rels, [l in collect(distinct last(l)) | [id(startNode(l)),id(endNode(l))]] as other_rels
-            RETURN proj, size(nodes), size(rels), size(other_nodes), size(other_rels), nodes, rels, other_nodes, other_rels
-            '''.format(sub_node_label, sub_node_id, group, project, sub_node_label, sub_node_id, group, project)
+            MATCH p = (proj:Project)-[r:Contains*]->(x)
+            WHERE (x)-[:Calls]->(:Method)<-[:Contains*0..]-(:{} {{id: "{}"}})<-[:Contains*0..]-(:Project {{id: "{}/{}"}})
+            UNWIND nodes(p) AS Vertex
+            WITH proj as proj, collect(DISTINCT Vertex) as nodes, collect(relationships(p)) as paths
+            UNWIND paths AS Edges
+            UNWIND Edges as Edge
+            WITH proj as proj, nodes, [r in collect(distinct Edge) | [id(startNode(r)),id(endNode(r))]] as rels
+            RETURN proj, size(nodes),size(rels),nodes,rels
+            '''.format(sub_node_label, sub_node_id, group, project)
 
         print(match)
         result = tx.run(match)
@@ -106,12 +130,8 @@ def ast_tree_dependent_new(tx, group, project, sub_node_label, sub_node_id):
         rels = []
         nodes = {}
         rels = rels + [x for x in record.get("rels") if x not in rels]
-        rels = rels + [x for x in record.get("other_rels") if x not in rels]
 
         for node in record.get("nodes"):
-            nodes[node.id] = node
-
-        for node in record.get("other_nodes"):
             nodes[node.id] = node
 
         dependents.append(createTreeFromEdges(rels, nodes, group, project, sub_node_label, sub_node_id)[0])

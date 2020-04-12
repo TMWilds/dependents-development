@@ -17,7 +17,7 @@
 <script>
 
     import {select, selectAll} from 'd3-selection'
-    import {interpolateViridis} from 'd3-scale-chromatic'
+    import {interpolateCool} from 'd3-scale-chromatic'
     import {hierarchy, cluster} from 'd3-hierarchy'
     import {lineRadial, curveBundle} from 'd3-shape'
     import {ascending} from 'd3-array'
@@ -31,7 +31,7 @@
         curveBundle: curveBundle,
         cluster: cluster,
         ascending: ascending,
-        interpolateViridis: interpolateViridis,
+        interpolateCool: interpolateCool,
     }
 
     export default {
@@ -80,7 +80,7 @@
                 const colourSelectInterval = 1 / this.projectList.length
                 const projects = this.projectList
                 for (const [index, project] of projects.entries()) {
-                    output[project] = d3.interpolateViridis(index * colourSelectInterval)
+                    output[project] = d3.interpolateCool(index * colourSelectInterval)
                 }
                 output[this.analysedProject] = "#ff5c45"
                 return output
@@ -197,7 +197,7 @@
                     .on("mouseout", outed)
                     .call(text => text.append("title").text(d => `${id(d)}
 ${d.outgoing.length} outgoing
-${d.incoming.length} incoming`))
+${d.incoming.length} incoming`.replace("root.", "")))
 
                 node.append("text")
                     .attr("dy", "0.31em")
@@ -214,7 +214,7 @@ ${d.incoming.length} incoming`))
                     .on("mouseout", outed)
                     .call(text => text.append("title").text(d => `${id(d)}
 ${d.outgoing.length} outgoing
-${d.incoming.length} incoming`))
+${d.incoming.length} incoming`.replace("root.", "")))
 
                 const link = svg.append("g")
                     .attr("stroke", colornone)

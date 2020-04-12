@@ -15,7 +15,7 @@
     import {schemeCategory10} from 'd3-scale-chromatic'
     import {hierarchy, tree} from 'd3-hierarchy'
     import {linkHorizontal, linkVertical} from 'd3-shape'
-    import {interpolateViridis} from 'd3-scale-chromatic'
+    import {interpolateCool} from 'd3-scale-chromatic'
 
     const getEvent = () => event;
 
@@ -37,7 +37,7 @@
         tree: tree,
         linkHorizontal: linkHorizontal,
         linkVertical: linkVertical,
-        interpolateViridis: interpolateViridis
+        interpolateCool: interpolateCool
     }
     export default {
         name: "ForceGraph",
@@ -85,7 +85,7 @@
                 const colourSelectInterval = 1 / this.projectList.length
                 const projects = this.projectList
                 for (const [index, project] of projects.entries()) {
-                    output[project] = d3.interpolateViridis(index * colourSelectInterval)
+                    output[project] = d3.interpolateCool(index * colourSelectInterval)
                 }
                 return output
             },
