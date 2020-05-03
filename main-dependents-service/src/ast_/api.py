@@ -8,7 +8,7 @@ import utils
 
 ast_blueprint = Blueprint('ast_blueprint', __name__)
 
-
+# Enables fetching of dependent ASTs of a given project artifact. Useful for a fine grained view of dependencies from a given level.
 @ast_blueprint.route("/<group>/<project>/dependent_asts", methods=['Get'])
 def fetch_dependent_asts(group, project):
     print(group)

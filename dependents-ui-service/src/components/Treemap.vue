@@ -1,4 +1,4 @@
-<!--https://github.com/albertopereira/vuejs-treemap/blob/master/src/components/Treemap.vue-->
+<!--Adapted from https://github.com/albertopereira/vuejs-treemap/blob/master/src/components/Treemap.vue-->
 <template>
   <div>
   <div :class="'treemap' + this._uid">

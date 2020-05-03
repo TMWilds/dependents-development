@@ -93,15 +93,6 @@ ast_tree_dependent retrieves the complete AST tree of a specified dependent proj
 def ast_tree_dependent_new(tx, group, project, sub_node_label, sub_node_id):
 
     if (sub_node_label != None and sub_node_id != None):
-        # match = '''
-        #     MATCH p = (proj:Project)-[r:Contains*0..]->(x)-[l:Contains*0..]->(i:Method)-[:Calls]->(:Method)<-[:Contains*0..]-(y:{} {{id: "{}"}})<-[:Contains*0..]-(:Project {{id: "{}/{}"}})
-        #     WITH proj as proj, collect(DISTINCT x) as nodes, collect(DISTINCT i) as other_nodes, [r in collect(distinct last(r)) | [id(startNode(r)),id(endNode(r))]] as rels, [l in collect(distinct last(l)) | [id(startNode(l)),id(endNode(l))]] as other_rels
-        #     RETURN proj, size(nodes), size(rels), size(other_nodes), size(other_rels), nodes, rels, other_nodes, other_rels
-        #     UNION
-        #     MATCH p = (proj:Project)-[r:Contains*0..]->(x)-[l:Contains*0..]->(i:Method)-[:Calls]->(y:{} {{id: "{}"}})<-[:Contains*0..]-(:Project {{id: "{}/{}"}})
-        #     WITH proj as proj, collect(DISTINCT x) as nodes, collect(DISTINCT i) as other_nodes, [r in collect(distinct last(r)) | [id(startNode(r)),id(endNode(r))]] as rels, [l in collect(distinct last(l)) | [id(startNode(l)),id(endNode(l))]] as other_rels
-        #     RETURN proj, size(nodes), size(rels), size(other_nodes), size(other_rels), nodes, rels, other_nodes, other_rels
-        #     '''.format(sub_node_label, sub_node_id, group, project, sub_node_label, sub_node_id, group, project)
         match = '''
             MATCH p = (proj:Project)-[r:Contains*]->(x)
             WHERE (x)-[:Calls]->(:Method)<-[:Contains*0..]-(:{} {{id: "{}"}})<-[:Contains*0..]-(:Project {{id: "{}/{}"}})
@@ -114,7 +105,6 @@ def ast_tree_dependent_new(tx, group, project, sub_node_label, sub_node_id):
             '''.format(sub_node_label, sub_node_id, group, project)
 
         print(match)
-        result = tx.run(match)
     else:
         match = '''
             MATCH p = (proj:Project)-[r:Contains*0..]->(x)-[l:Contains*0..]->(i:Method)-[:Calls]->(:Method)<-[:Contains*0..]-(:Project {{id: "{}/{}"}})
@@ -221,9 +211,9 @@ def dependents_from_node(tx, group, project, node_label, node_id):
 
     return to_return
 
-# TODO: replace original contains_from_node with this, or re-organise as needed
-def contains_from_node_new(tx, group, project):
-    """Return """
+def project_hierarchy(tx, group, project):
+    """Returns the project hierarchy, excluding methods that are not used by any other projects.
+    Useful for retrieving a filtered down representation of the analysed project that is relevent to dependent analysis."""
     dependent_project_string = ""
     match = '''
         MATCH (p:Project {{ id: '{}/{}' }})-[:Contains*]->(c)-[:Contains*]->(:Method)<-[:Calls]-(:Method)<-[:Contains*]-(d:Project {})
@@ -366,7 +356,7 @@ def all_project_dependencies(tx, group, project):
     return list(output.values())
 
 
-def contains_from_node(tx, group, project, node_label, node_id, dependent_project_group, dependent_project_repo):
+def contains_from_node_legacy(tx, group, project, node_label, node_id, dependent_project_group, dependent_project_repo):
     if (dependent_project_group != None and dependent_project_repo != None):
         dependent_project_string = "{{ id: '{}/{}' }}".format(dependent_project_group, dependent_project_repo)
     else:

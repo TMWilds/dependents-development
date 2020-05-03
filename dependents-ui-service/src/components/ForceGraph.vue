@@ -1,3 +1,4 @@
+<!--Inspired by https://observablehq.com/@d3/force-directed-graph-->
 <template>
     <div style="overflow-x: scroll; overflow-y: scroll" >
     <div :class="'app'+this._uid" style="height: inherit;">

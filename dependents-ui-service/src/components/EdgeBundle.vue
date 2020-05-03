@@ -1,3 +1,4 @@
+<!--Inspired by https://observablehq.com/@d3/hierarchical-edge-bundling-->
 <template>
     <div class="outer">
         <div class="inner-left" style="margin-top: 2rem">

@@ -42,12 +42,12 @@ def retrieve_children_of_node(group, project):
                 if session.read_transaction(neo4j_queries.project_exists, group, project):
                     if (dependent_group != None and dependent_repo != None):
                         if session.read_transaction(neo4j_queries.project_exists, dependent_group, dependent_repo):
-                            result = session.read_transaction(neo4j_queries.contains_from_node, group, project, node_label, node_id, dependent_group, dependent_repo)
+                            result = session.read_transaction(neo4j_queries.contains_from_node_legacy, group, project, node_label, node_id, dependent_group, dependent_repo)
                             return jsonify({'status': 'ok', 'data': result}), 200                           
                         else:
                             return jsonify({'status': 'ERROR', 'reason': 'Project does not exist in Neo4j. Have you submitted a parse job to /init/dependents-search/pom yet?'}), 400
                     else:
-                        result = session.read_transaction(neo4j_queries.contains_from_node, group, project, node_label, node_id, None, None)
+                        result = session.read_transaction(neo4j_queries.contains_from_node_legacy, group, project, node_label, node_id, None, None)
                         return jsonify({'status': 'ok', 'data': result}), 200
                 else:
                     return jsonify({'status': 'ERROR', 'reason': 'Project does not exist in Neo4j. Have you submitted a parse job to /init/dependents-search/pom yet?'}), 400
@@ -62,6 +62,7 @@ def retrieve_children_of_node(group, project):
 
     return jsonify({'status': 'SERVER_ERROR'}), 500
 
+# Returns the list of dependent methods for each of the analysed projects methods. Where methods have no dependents, they are omitted.
 @project_blueprint.route("/<group>/<project>/retrieve/project_calls", methods=['Get'])
 @cross_origin()
 def retrieve_project_calls(group, project):
@@ -87,15 +88,15 @@ def retrieve_project_calls(group, project):
 @cross_origin()
 def retrieve_hierarchy(group, project):
     """
-    This endpoint retrieves all children of the project that at least one
-    dependent project.
+    This endpoint retrieves all children of the project that are called by at
+    least one dependent project.
     """
     try:
         driver = utils.get_neo4j()
         try:
             with driver.session() as session:
                 if session.read_transaction(neo4j_queries.project_exists, group, project):
-                    result = session.read_transaction(neo4j_queries.contains_from_node_new, group, project)
+                    result = session.read_transaction(neo4j_queries.project_hierarchy, group, project)
                     return jsonify({'status': 'ok', 'data': result}), 200
                 else:
                     return jsonify({'status': 'ERROR', 'reason': 'Project does not exist in Neo4j. Have you submitted a parse job to /init/dependents-search/pom yet?'}), 400
