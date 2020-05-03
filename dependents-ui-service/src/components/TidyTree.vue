@@ -1,3 +1,4 @@
+<!--Inspired by: https://observablehq.com/@d3/tidy-tree -->
 <template>
     <div style="overflow-x: scroll; overflow-y: scroll" >
     <div :class="'tree'+this._uid" style="height: inherit;">

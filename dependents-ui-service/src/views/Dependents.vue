@@ -6,6 +6,11 @@
                 grow
         >
             <v-tab
+                key="info"
+            >
+                Info
+            </v-tab>
+            <v-tab
                     key="overview"
             >
                 Overview
@@ -18,6 +23,17 @@
         </v-tabs>
 
         <v-tabs-items v-model="tab">
+
+
+
+
+            <v-tab-item key="info">
+                <h1> Basic Project Information</h1>
+                <basic-info></basic-info>
+                <direct-dependents-list></direct-dependents-list>
+            </v-tab-item>
+
+
             <v-tab-item key="overview">
                 <edge-bundle style="max-width: 1000px;" v-if="overviewData" :analysed-project="analysedProject" :call-data="overviewData"/>
             </v-tab-item>
@@ -138,9 +154,13 @@
     import ForceGraph from "../components/ForceGraph";
     import EdgeBundle from "../components/EdgeBundle";
     import TidyTree from "../components/TidyTree";
+    import BasicInfo from "./BasicInfo";
+    import DirectDependentsList from "./DirectDependentsList";
 
     export default {
         components: {
+            DirectDependentsList,
+            BasicInfo,
             EdgeBundle,
             ForceGraph,
             Treemap,
@@ -153,7 +173,7 @@
         },
         mounted: async function () {
             const response = await fetch(
-                this.url+'/api/v1/project/'+this.analysedProject+'/retrieve/hierarchy',
+                this.api_url+'/project/'+this.analysedProject+'/retrieve/hierarchy',
                 {
                     method: 'GET'
                 }
@@ -162,7 +182,7 @@
             this.hiearchyData = stats["data"]
 
             const responseCalls = await fetch(
-                this.url+'/api/v1/project/'+this.analysedProject+'/retrieve/project_calls',
+                this.api_url+'/project/'+this.analysedProject+'/retrieve/project_calls',
                 {
                     method: 'GET'
                 }
@@ -184,15 +204,12 @@
         computed: {
             analysedProject: function () {
                 return this.$route.params.group + '/' + this.$route.params.project
-            },
-            url: function () {
-                return window.location.protocol + '//' + window.location.hostname + ':' +  window.location.port + '/'
             }
         },
         methods: {
             onHierarchyNodeSelect: async function (node) {
                 const response = await fetch(
-                    this.url+'/api/v1/ast/' + this.analysedProject + '/dependent_asts?label=' + node.node.data.label + '&id=' + node.node.data.id,
+                    this.api_url+'/ast/' + this.analysedProject + '/dependent_asts?label=' + node.node.data.label + '&id=' + node.node.data.id,
                     {
                         method: 'GET'
                     }
